@@ -524,17 +524,24 @@ def network_slcice_eda():
         col1, col2 = st.columns(2)
         with col1:
             st.subheader("Use Case Combinations Leading to Highest Delay")
+            
+            # Calculate average delay by use case combinations
             delay_by_use_case = (
                 df_train.groupby(['AR_VR_Gaming', 'Healthcare', 'Industry_4_0'])['Packet_delay']
                 .mean().reset_index(name='Avg_Delay').sort_values(by='Avg_Delay', ascending=False)
             ).head(10)
+            
+            # Create readable combo label
             delay_by_use_case['Combo'] = delay_by_use_case.apply(
                 lambda row: f"AR:{row['AR_VR_Gaming']}, HC:{row['Healthcare']}, I4.0:{row['Industry_4_0']}", axis=1)
+            
+            # Plot
             fig, ax = plt.subplots(figsize=(12, 6))
-            sns.barplot(data=delay_by_use_case, x='Avg_Delay', y='Combo', dodge=False, palette='magma', ax=ax)
+            sns.barplot(data=delay_by_use_case, x='Avg_Delay', y='Combo', hue='Combo', palette='magma', ax=ax, legend=False)
             ax.set_title('Top 10 Use Case Combinations → Avg Delay')
             st.pyplot(fig)
-        
+            plt.close(fig)
+       
         with col2:
             st.subheader("IoT vs Non‑IoT Traffic by Slice Type")
             iot_slice_counts = (
@@ -545,20 +552,34 @@ def network_slcice_eda():
             sns.barplot(data=iot_slice_counts, x='IoT_Devices', y='Count', hue='slice_type_label', dodge=True, palette='Set2', ax=ax)
             ax.set_title('IoT vs Non‑IoT Traffic by Slice')
             st.pyplot(fig)
-        
+
         # Row 2
         col3, col4 = st.columns(2)
         with col3:
             st.subheader("Avg Packet Delay by LTE/5G Category")
+            
+            # Calculate average packet delay by LTE/5G category
             avg_latency = (
                 df_train.groupby('LTE_5g_Category')['Packet_delay']
                 .mean().reset_index(name='Avg_Latency')
             )
+        
+            # Plot
             fig, ax = plt.subplots(figsize=(10, 6))
-            sns.barplot(data=avg_latency, x='LTE_5g_Category', y='Avg_Latency', palette='muted', dodge=False, ax=ax)
+            sns.barplot(
+                data=avg_latency,
+                x='LTE_5g_Category',
+                y='Avg_Latency',
+                hue='LTE_5g_Category',  # Add hue to use palette without warning
+                palette='muted',
+                dodge=False,
+                ax=ax,
+                legend=False  # Hide redundant legend
+            )
             ax.set_title('Avg Packet Delay · LTE/5G Category')
             st.pyplot(fig)
-        
+            plt.close(fig)
+      
         with col4:
             st.subheader("Traffic by Slice During Peak Hours")
             traffic_by_time_slice = (
@@ -575,41 +596,108 @@ def network_slcice_eda():
         col5, col6 = st.columns(2)
         with col5:
             st.subheader("Delay Std Dev by Slice Type")
+            
+            # Compute standard deviation of Packet Delay per slice type
             delay_std = df_train.groupby('slice_type_label')['Packet_delay'].std().reset_index(name='StdDev')
+            
+            # Plot
             fig, ax = plt.subplots(figsize=(10, 6))
-            sns.barplot(data=delay_std, x='slice_type_label', y='StdDev', palette='magma', dodge=False, ax=ax)
+            sns.barplot(
+                data=delay_std,
+                x='slice_type_label',
+                y='StdDev',
+                hue='slice_type_label',    # Add hue to avoid palette warning
+                palette='magma',
+                dodge=False,
+                ax=ax,
+                legend=False               # Disable redundant legend
+            )
+            
             ax.set_title('Packet Delay Std Dev · Slice Type')
             st.pyplot(fig)
-        
+            plt.close(fig)
+
+ 
         with col6:
             st.subheader("Slice Usage for Public Safety Apps")
+        
+            # Filter for Public Safety apps
             ps = df_train[df_train['Public_Safety'] == 1]
             pst = ps.groupby('slice_type_label').size().reset_index(name='Count')
+        
+            # Plot
             fig, ax = plt.subplots(figsize=(8, 6))
-            sns.barplot(data=pst, x='slice_type_label', y='Count', palette='coolwarm', dodge=False, ax=ax)
+            sns.barplot(
+                data=pst,
+                x='slice_type_label',
+                y='Count',
+                hue='slice_type_label',   # Add hue to avoid FutureWarning
+                palette='coolwarm',
+                dodge=False,
+                ax=ax,
+                legend=False              # Remove redundant legend
+            )
+            
             ax.set_title('Public Safety App → Slice Allocation')
             st.pyplot(fig)
+            plt.close(fig)
+
         
         # Row 4
+        # Row 4
         col7, col8 = st.columns(2)
+        
         with col7:
             st.subheader("Std Dev of Packet Delay by Time Slot")
+        
+            # Calculate standard deviation
             dt = df_train.groupby('Time')['Packet_delay'].std().reset_index(name='StdDev')
+        
+            # Plot
             fig, ax = plt.subplots(figsize=(10, 6))
-            sns.barplot(data=dt, x='Time', y='StdDev', palette='mako', dodge=False, ax=ax)
+            sns.barplot(
+                data=dt,
+                x='Time',
+                y='StdDev',
+                hue='Time',            # Required to use palette safely
+                palette='mako',
+                dodge=False,
+                ax=ax,
+                legend=False           # Avoid legend repetition
+            )
             plt.setp(ax.get_xticklabels(), rotation=45)
             ax.set_title('Delay Variability by Time Slot')
+            
             st.pyplot(fig)
+            plt.close(fig)            # ✅ Prevent too many open figures
+
         
         with col8:
             st.subheader("Avg Delay · GBR vs Non‑GBR")
+        
+            # Compute averages
             avg_gbr = df_train[df_train['GBR'] == 1]['Packet_delay'].mean()
             avg_non = df_train[df_train['Non_GBR'] == 1]['Packet_delay'].mean()
-            tmp = pd.DataFrame({'Traffic': ['GBR','Non‑GBR'], 'AvgDelay': [avg_gbr, avg_non]})
+        
+            # Create dataframe
+            tmp = pd.DataFrame({'Traffic': ['GBR', 'Non‑GBR'], 'AvgDelay': [avg_gbr, avg_non]})
+        
+            # Plot
             fig, ax = plt.subplots(figsize=(6, 4))
-            sns.barplot(data=tmp, x='Traffic', y='AvgDelay', palette='Set2', dodge=False, ax=ax)
+            sns.barplot(
+                data=tmp,
+                x='Traffic',
+                y='AvgDelay',
+                hue='Traffic',         # ✅ Required for using palette safely
+                palette='Set2',
+                dodge=False,
+                ax=ax,
+                legend=False           # ✅ No legend needed for this visual
+            )
             ax.set_title('Average Delay: GBR vs Non‑GBR')
             st.pyplot(fig)
+            plt.close(fig)             # ✅ Prevent figure overload
+
         
         # Row 5
         col9, col10 = st.columns(2)
@@ -623,15 +711,29 @@ def network_slcice_eda():
             sns.barplot(data=loss_pair, x='Avg_Loss', y='Smartphone', hue='AR_VR_Gaming', palette='coolwarm', ax=ax)
             ax.set_title('Packet Loss → AR/VR & Smartphone')
             st.pyplot(fig)
-        
+
         with col10:
             st.subheader("Overused Slices During High Traffic")
             high = df_train[(df_train['Packet_Loss_Rate'] > 0.03) | (df_train['Packet_delay'] > 100)]
             over = high.groupby('slice_type_label').size().reset_index(name='Count')
+            
             fig, ax = plt.subplots(figsize=(10, 6))
-            sns.barplot(data=over, x='Count', y='slice_type_label', palette='autumn', dodge=False, ax=ax)
+            
+            # Assign 'slice_type_label' to hue to avoid FutureWarning
+            sns.barplot(
+                data=over, 
+                x='Count', 
+                y='slice_type_label', 
+                palette='autumn', 
+                hue='slice_type_label', 
+                legend=False, 
+                dodge=False, 
+                ax=ax
+            )
+        
             ax.set_title('Overused Slice Types (High Delay/Loss)')
             st.pyplot(fig)
+
         
         # Row 6
         col11, col12 = st.columns(2)
@@ -648,19 +750,34 @@ def network_slcice_eda():
                 ax.text(r['Avg_Delay']+0.5, r['Avg_Loss'], r['slice_type_label'])
             ax.set_title('Delay vs Packet Loss: Slice Type')
             st.pyplot(fig)
-        
+
+
         with col12:
             st.subheader("Device Type & Slice Congestion")
+            
+            # Group and aggregate
             cong = (
                 df_train.groupby(['IoT_Devices', 'Smartphone', 'slice_type_label'])
-                .size().reset_index(name='Count').sort_values('Count', ascending=False).head(10)
+                .size()
+                .reset_index(name='Count')
+                .sort_values('Count', ascending=False)
+                .head(10)
             )
+            
+            # Create label for y-axis
             cong['Combo'] = cong.apply(lambda r: f"IoT:{r['IoT_Devices']}|SP:{r['Smartphone']}|Slice:{r['slice_type_label']}", axis=1)
+            
+            # Plot
             fig, ax = plt.subplots(figsize=(12, 6))
-            sns.barplot(data=cong, x='Count', y='Combo', palette='YlOrRd', dodge=False, ax=ax)
-            ax.set_title('Top 10 Device‑Slice Congestion Pairs')
+            
+            # Fix FutureWarning by using hue='Combo' and legend=False
+            sns.barplot(data=cong, x='Count', y='Combo', palette='YlOrRd', hue='Combo', legend=False, dodge=False, ax=ax)
+            
+            ax.set_title('Device‑Slice Congestion Pairs')
             st.pyplot(fig)
+            plt.close(fig)  # Prevent memory warning
         
+             
         # Row 7
         col13, col14 = st.columns(2)
         with col13:
@@ -802,7 +919,7 @@ def network_slcice_eda():
         with col1:
             st.subheader("Feature Correlation with Target (Cramér's V)")
             from scipy.stats import chi2_contingency
-    
+        
             def cramers_v(x, y):
                 confusion_matrix = pd.crosstab(x, y)
                 chi2 = chi2_contingency(confusion_matrix)[0]
@@ -810,7 +927,7 @@ def network_slcice_eda():
                 phi2 = chi2 / n
                 r, k = confusion_matrix.shape
                 return np.sqrt(phi2 / min(k - 1, r - 1))
-    
+        
             cat_features = [col for col in selected_features if df_train[col].nunique() <= 10]
             cramers_results = []
             for col in cat_features:
@@ -819,41 +936,45 @@ def network_slcice_eda():
                     cramers_results.append((col, v))
                 except:
                     continue
-    
+        
             cramers_df = pd.DataFrame(cramers_results, columns=['Feature', 'Cramers_V']).sort_values(by='Cramers_V', ascending=False)
-    
+        
             fig, ax = plt.subplots(figsize=(10, 6))
-            sns.barplot(data=cramers_df, x='Cramers_V', y='Feature', palette='mako', ax=ax)
+            # Explicitly set hue=None to avoid FutureWarning
+            sns.barplot(data=cramers_df, x='Cramers_V', y='Feature', palette='mako', hue='Feature', legend=False, ax=ax)
             ax.set_title("Top Features Correlated with Target")
             st.pyplot(fig)
-    
+
+
         # Row 2: Numeric Feature Importance (Correlation Heatmap)
         col2, _ = st.columns([1, 0.1])
         with col2:
             st.subheader("Numerical Feature Correlation with Target")
-    
+        
             num_features = [col for col in selected_features if pd.api.types.is_numeric_dtype(df_train[col])]
             df_corr = df_train[num_features + [target_column]].copy()
-    
+        
             # If target is categorical, encode it numerically
             if df_corr[target_column].dtype == 'object':
                 df_corr[target_column] = df_corr[target_column].astype('category').cat.codes
-    
+        
             corr = df_corr.corr()[[target_column]].drop(target_column).sort_values(by=target_column, ascending=False)
-    
+        
             fig, ax = plt.subplots(figsize=(8, 6))
-            sns.barplot(x=corr[target_column], y=corr.index, palette='viridis', ax=ax)
+            # Add hue=None to suppress FutureWarning
+            sns.barplot(x=corr[target_column], y=corr.index, palette='viridis', hue=corr.index, legend=False, ax=ax)
             ax.set_title("Feature Correlation with Target")
             st.pyplot(fig)
-    
+   
         # Row 3: Distribution of Target Column
         col3, _ = st.columns([1, 0.1])
         with col3:
             st.subheader("Distribution of Target Labels")
             fig, ax = plt.subplots(figsize=(8, 6))
-            sns.countplot(data=df_train, x=target_column, palette='Set3', ax=ax)
+            sns.countplot(data=df_train, x=target_column, palette='Set3', hue=df_train[target_column], legend=False, ax=ax)
             ax.set_title("Target Label Distribution")
             st.pyplot(fig)
+
     
         # Row 4: Mean Feature Values per Target Class
         col4, _ = st.columns([1, 0.1])
@@ -880,15 +1001,17 @@ def network_slcice_eda():
                 ax.set_title("Application Usage per Slice Type")
                 st.pyplot(fig)
 
-        # Row 6: Forecasting Peak Usage Times
+    # Row 6: Forecasting Peak Usage Times
     col6, _ = st.columns([1, 0.1])
     with col6:
         st.subheader("Forecasting Peak Usage Times")
         peak_usage = df_train.groupby('Time').size().reset_index(name='Usage').sort_values(by='Usage', ascending=False)
         fig, ax = plt.subplots(figsize=(10, 4))
-        sns.barplot(data=peak_usage, x='Time', y='Usage', palette='Blues_d', ax=ax)
+        sns.barplot(data=peak_usage, x='Time', y='Usage', palette='Blues_d', hue='Time', legend=False, ax=ax)
         ax.set_title("Peak Network Usage by Time Interval")
+        plt.setp(ax.get_xticklabels(), rotation=45)
         st.pyplot(fig)
+
 
     # Row 7: Correlation of Packet Delay & Loss
     col7, _ = st.columns([1, 0.1])
@@ -925,10 +1048,9 @@ def network_slcice_eda():
         st.subheader("LTE/5G Impact on Delay")
         lte_delay = df_train.groupby('LTE_5G')['Packet_delay'].mean().reset_index()
         fig, ax = plt.subplots(figsize=(6, 4))
-        sns.barplot(data=lte_delay, x='LTE_5G', y='Packet_delay', palette='Set2', ax=ax)
+        sns.barplot(data=lte_delay, x='LTE_5G', y='Packet_delay', palette='Set2', hue='LTE_5G', legend=False, ax=ax)
         ax.set_title("Average Delay by LTE/5G")
         st.pyplot(fig)
-
 
 #------------------------------------------------------------------------------------------------------------------------------------------------------
     
@@ -1128,7 +1250,7 @@ def network_slcice_eda():
         
             # Step 5: Plot the MI scores
             fig, ax = plt.subplots(figsize=(12, 6))
-            sns.barplot(x='MI Score', y='Feature', data=mi_df, palette='viridis', ax=ax)
+            sns.barplot(x='MI Score', y='Feature', data=mi_df, palette='viridis', hue='Feature', legend=False, ax=ax)
             ax.set_title("Mutual Information Scores for Predicting Slice Type")
             ax.set_xlabel("Mutual Information Score")
             ax.set_ylabel("Feature")
