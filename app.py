@@ -48,28 +48,16 @@ def login_page():
 #------------------------------------------------------------------------------------------------------------------------------------------------------
   
 # 5. Load Dataset
-import pyodbc
 import pandas as pd
 import warnings
 
-# Optional: Suppress pandas SQLAlchemy warning
+# Optional: Suppress warnings
 warnings.filterwarnings("ignore", category=UserWarning)
 
-# Define connection parameters (note double backslashes)
-conn = pyodbc.connect(
-    "Driver={SQL Server};"
-    "Server=DESKTOP-3PHCCOH\\SQLEXPRESS;"
-    "Database=PROJECT7;"
-    "Trusted_Connection=yes;"
-)
+# Load CSV files instead of using SQL Server
+df_test = pd.read_csv("test_dataset.csv")
+df_train = pd.read_csv("train_dataset.csv")
 
-# SQL queries
-sql_query_test = "SELECT * FROM TEST_DATASET"
-sql_query_train = "SELECT * FROM TRAIN_DATASET"
-
-# Load data into pandas DataFrames
-df_test = pd.read_sql(sql_query_test, conn)
-df_train = pd.read_sql(sql_query_train, conn)
 
 #------------------------------------------------------------------------------------------------------------------------------------------------------
 
